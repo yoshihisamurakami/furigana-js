@@ -10,6 +10,8 @@ const addFurigana = (originalText, furiganaObj) => {
     let currentIndex = 0
 
     let count = 0
+    let furiganaObjStartIndex = 0
+
     while (currentIndex < originalText.length) {
         count += 1
         if (count > 10000) {
@@ -18,7 +20,7 @@ const addFurigana = (originalText, furiganaObj) => {
         }
         let found = false
 
-        for (let i = 0; i < furiganaObj.length; i++) {
+        for (let i = furiganaObjStartIndex; i < furiganaObj.length; i++) {
             const obj = furiganaObj[i]
             if (obj.text == '') {
                 continue
@@ -34,6 +36,7 @@ const addFurigana = (originalText, furiganaObj) => {
                 }
                 currentIndex += obj.text.length
                 found = true
+                furiganaObjStartIndex = i + 1
                 break
             }
         }
@@ -70,44 +73,68 @@ const fetchFuriganaApi = async (originalText) => {
     return data
 }
 
-const updateElementText = async (element) => {
-    const originalText = element.textContent.trim()
-    if (originalText.length === 0 || !containsKanji(originalText)) {
-        return
-    }
+// const addRubyToElement = (element, apiResponseText) => {
+//     const original_text = apiResponseText.original_text
+//     const text = apiResponseText.text
+//     if (!containsKanji(original_text)) {
+//         return
+//     }
 
-    const parent = element.parentNode
-    if (parent && parent.tagName === 'RUBY') {
-        return
-    }
+//     const textWithRuby = addFurigana(original_text, text)
+//     let newElement = document.createElement('span')
+//     newElement.innerHTML = textWithRuby
+//     const parent = element.parentNode
+//     if (parent) {
+//         parent.replaceChild(newElement, element)
+//     }
+// }
 
-    const apiResponse = await fetchFuriganaApi(originalText)
-    if (!apiResponse || apiResponse.text.length == 0) {
-        return
-    }
+// const updateElementText = async (element) => {
+//     const originalText = element.textContent.trim()
+//     if (originalText.length === 0 || !containsKanji(originalText)) {
+//         return
+//     }
 
-    const textWithRuby = addFurigana(apiResponse.original_text, apiResponse.text)
+//     const parent = element.parentNode
+//     if (parent && parent.tagName === 'RUBY') {
+//         return
+//     }
 
-    let newElement = document.createElement('span')
-    newElement.innerHTML = textWithRuby
-    if (parent) {
-        console.log('### originalText = ' + originalText)
-        console.log('### textWithRuby = ' + textWithRuby)
-        parent.replaceChild(newElement, element)
-    }
-}
+//     const apiResponse = await fetchFuriganaApi(originalText)
+//     if (!apiResponse || apiResponse.text.length == 0) {
+//         return
+//     }
+
+//     const textWithRuby = addFurigana(apiResponse.original_text, apiResponse.text)
+
+//     let newElement = document.createElement('span')
+//     newElement.innerHTML = textWithRuby
+//     if (parent) {
+//         // console.log('### originalText = ' + originalText)
+//         // console.log('### textWithRuby = ' + textWithRuby)
+//         parent.replaceChild(newElement, element)
+//     }
+// }
 
 const getTextNodes = async (elements, stocks) => {
     for (const element of Array.from(elements)) {
         if (element.tagName === 'SCRIPT') {
             continue // スクリプト要素はスキップ
         }
+        const parent = element.parentNode
+        if (parent && parent.tagName === 'RUBY') {
+            return
+        }
+        if (parent && parent.tagName === 'STYLE') {
+            return
+        }
+        if (parent && parent.tagName === 'NOSCRIPT') {
+            return
+        }
         if (element.nodeType === Node.TEXT_NODE) {
             const originalText = element.textContent.trim()
             if (originalText.length !== 0) {
-                console.log('### [getTextNodes] originalText = ' + originalText)
                 stocks.push(element)
-                // await updateElementText(element)
             }
         } else if (element.nodeType === Node.ELEMENT_NODE && element.hasChildNodes()) {
             await getTextNodes(element.childNodes, stocks)
@@ -118,12 +145,21 @@ const getTextNodes = async (elements, stocks) => {
 
 const main = async () => {
     let stocks = []
-    // const elements = document.getElementsByTagName('body')
-    const elements = document.getElementsByTagName('h1')
+    const elements = document.getElementsByTagName('body')
     const textElements = await getTextNodes(elements, stocks)
-    for (const element of Array.from(textElements)) {
-        const originalText =  element.textContent.trim()
-        console.log('### [main] originalText = ' + originalText)
+    let textList = textElements.map(element => element.textContent.trim())
+    const apiResponse = await fetchFuriganaApi(textList)
+
+    for (const [index, element] of Array.from(textElements).entries()) {
+        const original_text = apiResponse.text[index].original_text
+        const text = apiResponse.text[index].text
+        const textWithRuby = addFurigana(original_text, text)
+        let newElement = document.createElement('span')
+        newElement.innerHTML = textWithRuby
+        const parent = element.parentNode
+        if (parent) {
+            parent.replaceChild(newElement, element)
+        }
     }
 }
 
@@ -132,6 +168,5 @@ window.addEventListener("load", (_) => {
     // 1秒後にルビ振り処理を開始する
     setTimeout(async function() {
         await main()
-
     }, 1000)
 })
