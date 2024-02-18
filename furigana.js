@@ -73,53 +73,13 @@ const fetchFuriganaApi = async (originalText) => {
     return data
 }
 
-// const addRubyToElement = (element, apiResponseText) => {
-//     const original_text = apiResponseText.original_text
-//     const text = apiResponseText.text
-//     if (!containsKanji(original_text)) {
-//         return
-//     }
-
-//     const textWithRuby = addFurigana(original_text, text)
-//     let newElement = document.createElement('span')
-//     newElement.innerHTML = textWithRuby
-//     const parent = element.parentNode
-//     if (parent) {
-//         parent.replaceChild(newElement, element)
-//     }
-// }
-
-// const updateElementText = async (element) => {
-//     const originalText = element.textContent.trim()
-//     if (originalText.length === 0 || !containsKanji(originalText)) {
-//         return
-//     }
-
-//     const parent = element.parentNode
-//     if (parent && parent.tagName === 'RUBY') {
-//         return
-//     }
-
-//     const apiResponse = await fetchFuriganaApi(originalText)
-//     if (!apiResponse || apiResponse.text.length == 0) {
-//         return
-//     }
-
-//     const textWithRuby = addFurigana(apiResponse.original_text, apiResponse.text)
-
-//     let newElement = document.createElement('span')
-//     newElement.innerHTML = textWithRuby
-//     if (parent) {
-//         // console.log('### originalText = ' + originalText)
-//         // console.log('### textWithRuby = ' + textWithRuby)
-//         parent.replaceChild(newElement, element)
-//     }
-// }
-
 const getTextNodes = async (elements, stocks) => {
     for (const element of Array.from(elements)) {
         if (element.tagName === 'SCRIPT') {
             continue // スクリプト要素はスキップ
+        }
+        if (element.tagName === 'R') {
+            continue // R要素はスキップ
         }
         const parent = element.parentNode
         if (parent && parent.tagName === 'RUBY') {
@@ -129,6 +89,9 @@ const getTextNodes = async (elements, stocks) => {
             return
         }
         if (parent && parent.tagName === 'NOSCRIPT') {
+            return
+        }
+        if (parent && parent.tagName === 'R' && parent.className.includes('js-furigana')) {
             return
         }
         if (element.nodeType === Node.TEXT_NODE) {
@@ -143,18 +106,24 @@ const getTextNodes = async (elements, stocks) => {
     return stocks
 }
 
-const main = async () => {
-    let stocks = []
-    const elements = document.getElementsByTagName('body')
-    const textElements = await getTextNodes(elements, stocks)
+const addFuriganaToTextNodes = async (textElements) => {
     let textList = textElements.map(element => element.textContent.trim())
+    if (textList.length == 0) {
+        return
+    }
     const apiResponse = await fetchFuriganaApi(textList)
 
     for (const [index, element] of Array.from(textElements).entries()) {
         const original_text = apiResponse.text[index].original_text
         const text = apiResponse.text[index].text
         const textWithRuby = addFurigana(original_text, text)
-        let newElement = document.createElement('span')
+        let newElement = document.createElement('r')
+        if (typeof element.className === 'undefined') {
+            newElement.className = 'js-furigana'
+        } else {
+            newElement.className = element.className + ' js-furigana'
+        }
+        
         newElement.innerHTML = textWithRuby
         const parent = element.parentNode
         if (parent) {
@@ -163,10 +132,33 @@ const main = async () => {
     }
 }
 
+const main = async () => {
+    let stocks = []
+    const elements = document.getElementsByTagName('body')
+    const textElements = await getTextNodes(elements, stocks)
+    await addFuriganaToTextNodes(textElements)
+}
+
 window.addEventListener("load", (_) => {
-    // ページロード後にJavaScriptでコンテンツが読み込まれることがあるため、
-    // 1秒後にルビ振り処理を開始する
     setTimeout(async function() {
         await main()
-    }, 1000)
+    }, 0)
 })
+
+const config = { attributes: true, childList: true, subtree: true }
+
+const callback = async (mutationsList, observer) => {
+    for (const mutation of mutationsList) {
+        if (mutation.type === "childList") {
+            let stocks = []
+            const textElements = await getTextNodes(mutation.addedNodes, stocks)
+            await addFuriganaToTextNodes(textElements)
+        }
+    }
+}
+
+// コールバック関数に結びつけられたオブザーバーのインスタンスを生成
+const observer = new MutationObserver(callback)
+
+// 対象ノードの設定された変更の監視を開始
+observer.observe(document.body, config)
