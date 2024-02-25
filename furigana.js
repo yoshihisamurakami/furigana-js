@@ -118,12 +118,7 @@ const addFuriganaToTextNodes = async (textElements) => {
         const text = apiResponse.text[index].text
         const textWithRuby = addFurigana(original_text, text)
         let newElement = document.createElement('r')
-        if (typeof element.className === 'undefined') {
-            newElement.className = 'js-furigana'
-        } else {
-            newElement.className = element.className + ' js-furigana'
-        }
-        
+        newElement.className = element.className ? element.className + ' js-furigana' : 'js-furigana';
         newElement.innerHTML = textWithRuby
         const parent = element.parentNode
         if (parent) {
@@ -139,15 +134,9 @@ const main = async () => {
     await addFuriganaToTextNodes(textElements)
 }
 
-window.addEventListener("load", (_) => {
-    setTimeout(async function() {
-        await main()
-    }, 0)
-})
+const mutationObserverConfig = { attributes: true, childList: true, subtree: true }
 
-const config = { attributes: true, childList: true, subtree: true }
-
-const callback = async (mutationsList, observer) => {
+const mutationObserverCallback = async (mutationsList, observer) => {
     for (const mutation of mutationsList) {
         if (mutation.type === "childList") {
             let stocks = []
@@ -158,7 +147,50 @@ const callback = async (mutationsList, observer) => {
 }
 
 // コールバック関数に結びつけられたオブザーバーのインスタンスを生成
-const observer = new MutationObserver(callback)
+const observer = new MutationObserver(mutationObserverCallback)
 
 // 対象ノードの設定された変更の監視を開始
-observer.observe(document.body, config)
+// observer.observe(document.body, config)
+
+const furiganaSwitchOn = async () => {
+    setTimeout(async function() {
+        await main()
+
+        // 対象ノードの設定された変更の監視を開始
+        observer.observe(document.body, mutationObserverConfig)
+    }, 0)
+
+    const styleElement = document.getElementById('hide-furigana-style')
+    if (styleElement) {
+        styleElement.parentNode.removeChild(styleElement)
+    }
+}
+
+const furiganaSwitchOff = async () => {
+    const css = '.js-furigana rt { display: none; }'
+    const style = document.createElement('style')
+    style.id = 'hide-furigana-style'
+    style.appendChild(document.createTextNode(css))
+    document.getElementsByTagName('head')[0].appendChild(style)
+}
+
+// popup.js から「ふりがなON」「ふりがなOFF」の選択肢が変わったとき
+chrome.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
+    if (request.msg === 'popup-furigana-on') {
+        chrome.storage.local.set({furiganaMode: true})
+        await furiganaSwitchOn()
+    } else if (request.msg === 'popup-furigana-off') {
+        chrome.storage.local.set({furiganaMode: false})
+        await furiganaSwitchOff()
+    }
+})
+
+// ページが読み込まれたタイミングで実行される
+chrome.storage.local.get(null, (options) => {
+    const furiganaMode = typeof options.furiganaMode === 'undefined' ? true : options.furiganaMode
+    if (furiganaMode) {
+        furiganaSwitchOn()
+    } else {
+        furiganaSwitchOff()
+    }
+})
