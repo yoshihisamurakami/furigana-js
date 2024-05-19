@@ -157,6 +157,7 @@ const addFuriganaToTextNodes = async (textElements) => {
         }
         const textWithRuby = addFurigana(originalText, text)
         if (typeof element.parentNode === 'undefined') { continue }
+        if (element.parentNode === null) { continue }
         if (typeof element.parentNode.innerHTML === 'undefined') { continue }
         if (textWithRuby === element.parentNode.innerHTML) {
             continue
@@ -178,40 +179,54 @@ const main = async () => {
     await addFuriganaToTextNodes(textElements)
 }
 
-const mutationObserverConfig = { attributes: true, childList: true, subtree: true }
+// MEMO: webページの変更を監視する MutationObserver周りの設定
+const FgMutationObserver = {
+    config: { attributes: true, childList: true, subtree: true },
 
-const mutationObserverCallback = async (mutationsList, observer) => {
-    for (const mutation of mutationsList) {
-        if (mutation.type === "childList") {
-            const textElements = await getTextNodes(mutation.addedNodes)
-            await addFuriganaToTextNodes(textElements)
+    callback: async (mutationsList, observer) => {
+        for (const mutation of mutationsList) {
+            if (mutation.type === "childList") {
+                const textElements = await getTextNodes(mutation.addedNodes)
+                await addFuriganaToTextNodes(textElements)
+            }
         }
+    },
+
+    observe: function(node = document.body) {
+        // コールバック関数に結びつけられたオブザーバーのインスタンスを生成
+        const observer = new MutationObserver(this.callback)
+        // 対象ノードの設定された変更の監視を開始
+        observer.observe(node, this.config)
     }
 }
 
-// コールバック関数に結びつけられたオブザーバーのインスタンスを生成
-const observer = new MutationObserver(mutationObserverCallback)
-
-const furiganaSwitchOn = async () => {
-    setTimeout(async function() {
-        await main()
-
-        // 対象ノードの設定された変更の監視を開始
-        observer.observe(document.body, mutationObserverConfig)
-    }, 0)
-
+const showFuriganaIfHide = () => {
     const styleElement = document.getElementById('hide-furigana-style')
     if (styleElement) {
         styleElement.parentNode.removeChild(styleElement)
     }
 }
 
-const furiganaSwitchOff = async () => {
+const hideFurigana = () => {
     const css = '.js-furigana rt { display: none; }'
     const style = document.createElement('style')
     style.id = 'hide-furigana-style'
     style.appendChild(document.createTextNode(css))
     document.getElementsByTagName('head')[0].appendChild(style)
+}
+
+const furiganaSwitchOn = async () => {
+    setTimeout(async function() {
+        await main()
+
+        FgMutationObserver.observe(document.body)
+    }, 0)
+
+    showFuriganaIfHide()
+}
+
+const furiganaSwitchOff = async () => {
+    hideFurigana()
 }
 
 // chrome拡張機能のポップアップ画面から「ふりがなON」「ふりがなOFF」の選択肢が変わったとき
