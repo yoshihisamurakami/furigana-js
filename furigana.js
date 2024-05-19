@@ -1,5 +1,5 @@
 
-const FuriganaApiUrl = 'http://localhost:8080/furigana'
+const FuriganaApiUrl = 'http://localhost:8080/v2/furigana'
 
 const containsKanji = (str) => {
     return /[\u4E00-\u9FAF]/.test(str)
@@ -68,34 +68,59 @@ const fetchFuriganaApi = async (originalText) => {
         })
         .catch(error => {
             console.log('There was a problem with the fetch operation: ')
+            return {response: []}
         })
     
     return data
 }
 
-const getTextNodes = async (elements, stocks) => {
+const isExcludeTag = (element) => {
+    if (element.tagName === 'SCRIPT') {
+        return true
+    } else if (element.tagName === 'R') {
+        return true
+    }
+    return false
+}
+
+const isExcludeParentTag = (element) => {
+    const parent = element.parentNode
+    if (parent && parent.tagName === 'RUBY') {
+        return true
+    }
+    if (parent && parent.tagName === 'STYLE') {
+        return true
+    }
+    if (parent && parent.tagName === 'NOSCRIPT') {
+        return true
+    }
+    if (parent && parent.tagName === 'R' && parent.className.includes('js-furigana')) {
+        return true
+    }
+    if (parent && parent.tagName === 'SPAN' && parent.className.includes('js-furigana')) {
+        return true
+    }
+    return false
+}
+
+const encodeHtmlEntities = (text) => {
+    return text.replace(/&/g, '&amp;')
+               .replace(/</g, '&lt;')
+               .replace(/>/g, '&gt;')
+               .replace(/"/g, '&quot;')
+               .replace(/'/g, '&#39;')
+}
+
+const getTextNodes = async (elements, stocks = []) => {
     for (const element of Array.from(elements)) {
-        if (element.tagName === 'SCRIPT') {
-            continue // スクリプト要素はスキップ
+        if (isExcludeTag(element) === true) {
+            continue
         }
-        if (element.tagName === 'R') {
-            continue // R要素はスキップ
-        }
-        const parent = element.parentNode
-        if (parent && parent.tagName === 'RUBY') {
-            return
-        }
-        if (parent && parent.tagName === 'STYLE') {
-            return
-        }
-        if (parent && parent.tagName === 'NOSCRIPT') {
-            return
-        }
-        if (parent && parent.tagName === 'R' && parent.className.includes('js-furigana')) {
+        if (isExcludeParentTag(element) === true) {
             return
         }
         if (element.nodeType === Node.TEXT_NODE) {
-            const originalText = element.textContent.trim()
+            const originalText = encodeHtmlEntities(element.textContent).trim()
             if (originalText.length !== 0) {
                 stocks.push(element)
             }
@@ -107,16 +132,36 @@ const getTextNodes = async (elements, stocks) => {
 }
 
 const addFuriganaToTextNodes = async (textElements) => {
-    let textList = textElements.map(element => element.textContent.trim())
+    let textList = textElements.map(element => encodeHtmlEntities(element.textContent).trim())
     if (textList.length == 0) {
         return
     }
+
     const apiResponse = await fetchFuriganaApi(textList)
+    const response  = apiResponse.response
+    if (typeof response === 'undefined') {
+        return
+    }
 
     for (const [index, element] of Array.from(textElements).entries()) {
-        const original_text = apiResponse.text[index].original_text
-        const text = apiResponse.text[index].text
-        const textWithRuby = addFurigana(original_text, text)
+        if (typeof response[index] === 'undefined') {
+            continue
+        }
+        const originalText = response[index].originalText
+        if (typeof originalText === 'undefined') {
+            continue
+        }
+        const text = response[index].text // API側で textList とするほうが適切かも
+        if (typeof text === 'undefined') {
+            continue
+        }
+        const textWithRuby = addFurigana(originalText, text)
+        if (typeof element.parentNode === 'undefined') { continue }
+        if (typeof element.parentNode.innerHTML === 'undefined') { continue }
+        if (textWithRuby === element.parentNode.innerHTML) {
+            continue
+        }
+        // MEMO: <span>タグを追加した場合、ページに設定されているスタイルを拾ってしまうことがあるため、<r>タグという非標準のタグを使う
         let newElement = document.createElement('r')
         newElement.className = element.className ? element.className + ' js-furigana' : 'js-furigana';
         newElement.innerHTML = textWithRuby
@@ -128,9 +173,8 @@ const addFuriganaToTextNodes = async (textElements) => {
 }
 
 const main = async () => {
-    let stocks = []
-    const elements = document.getElementsByTagName('body')
-    const textElements = await getTextNodes(elements, stocks)
+    const bodyElements = document.getElementsByTagName('body')
+    const textElements = await getTextNodes(bodyElements)
     await addFuriganaToTextNodes(textElements)
 }
 
@@ -139,8 +183,7 @@ const mutationObserverConfig = { attributes: true, childList: true, subtree: tru
 const mutationObserverCallback = async (mutationsList, observer) => {
     for (const mutation of mutationsList) {
         if (mutation.type === "childList") {
-            let stocks = []
-            const textElements = await getTextNodes(mutation.addedNodes, stocks)
+            const textElements = await getTextNodes(mutation.addedNodes)
             await addFuriganaToTextNodes(textElements)
         }
     }
@@ -148,9 +191,6 @@ const mutationObserverCallback = async (mutationsList, observer) => {
 
 // コールバック関数に結びつけられたオブザーバーのインスタンスを生成
 const observer = new MutationObserver(mutationObserverCallback)
-
-// 対象ノードの設定された変更の監視を開始
-// observer.observe(document.body, config)
 
 const furiganaSwitchOn = async () => {
     setTimeout(async function() {
@@ -174,7 +214,7 @@ const furiganaSwitchOff = async () => {
     document.getElementsByTagName('head')[0].appendChild(style)
 }
 
-// popup.js から「ふりがなON」「ふりがなOFF」の選択肢が変わったとき
+// chrome拡張機能のポップアップ画面から「ふりがなON」「ふりがなOFF」の選択肢が変わったとき
 chrome.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
     if (request.msg === 'popup-furigana-on') {
         chrome.storage.local.set({furiganaMode: true})
