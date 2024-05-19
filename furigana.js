@@ -1,5 +1,4 @@
 
-// const FuriganaApiUrl = 'http://localhost:8080/furigana'
 const FuriganaApiUrl = 'http://localhost:8080/v2/furigana'
 
 const containsKanji = (str) => {
@@ -184,8 +183,7 @@ const mutationObserverConfig = { attributes: true, childList: true, subtree: tru
 const mutationObserverCallback = async (mutationsList, observer) => {
     for (const mutation of mutationsList) {
         if (mutation.type === "childList") {
-            let stocks = []
-            const textElements = await getTextNodes(mutation.addedNodes, stocks)
+            const textElements = await getTextNodes(mutation.addedNodes)
             await addFuriganaToTextNodes(textElements)
         }
     }
@@ -216,7 +214,7 @@ const furiganaSwitchOff = async () => {
     document.getElementsByTagName('head')[0].appendChild(style)
 }
 
-// popup.js から「ふりがなON」「ふりがなOFF」の選択肢が変わったとき
+// chrome拡張機能のポップアップ画面から「ふりがなON」「ふりがなOFF」の選択肢が変わったとき
 chrome.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
     if (request.msg === 'popup-furigana-on') {
         chrome.storage.local.set({furiganaMode: true})
