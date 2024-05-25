@@ -64,7 +64,7 @@ const fetchFuriganaApi = async (originalText) => {
             return response.json()
         })
         .then(data => {
-            return data
+            return data.response
         })
         .catch(error => {
             console.log('There was a problem with the fetch operation: ')
@@ -131,45 +131,71 @@ const getTextNodes = async (elements, stocks = []) => {
     return stocks
 }
 
+const isValidApiResponseOnIndex = (apiResponse, index) => {
+    if (typeof apiResponse[index] === 'undefined') {
+        return false
+    }
+    if (typeof apiResponse[index].originalText === 'undefined') {
+        return false
+    }
+    // API側で apiResponse[index].textList とするほうが適切かも)
+    if (typeof apiResponse[index].text === 'undefined') {
+        return false
+    }
+    return true
+}
+
+const isValidElementForAddRubyTag = (element) => {
+    if (typeof element.parentNode === 'undefined') {
+        return false
+    }
+    if (element.parentNode === null) {
+        return false
+    }
+    if (typeof element.parentNode.innerHTML === 'undefined') {
+        return false
+    }
+    return true
+}
+
+const addFuriganaToNode = (element, furiganaTag) => {
+    // MEMO:
+    // ふりがな挿入用のタグを <span class="js-furigana"> .. </span>
+    // とした場合、素の<span>タグに何らかのスタイルが割り当てられているページに適用すると、
+    // そのスタイルがふりがなタグ全体に適用されてしまいページ表示が崩れることがある。
+    // その現象を防ぐため、<r>タグという非標準のタグを使った。
+    let newElement = document.createElement('r')
+    newElement.className = element.className ? element.className + ' js-furigana' : 'js-furigana';
+    newElement.innerHTML = furiganaTag
+    const parent = element.parentNode
+    if (parent) {
+        parent.replaceChild(newElement, element)
+    }
+}
+
 const addFuriganaToTextNodes = async (textElements) => {
     let textList = textElements.map(element => encodeHtmlEntities(element.textContent).trim())
-    if (textList.length == 0) {
+    if (textList.length === 0) {
         return
     }
 
     const apiResponse = await fetchFuriganaApi(textList)
-    const response  = apiResponse.response
-    if (typeof response === 'undefined') {
+    if (typeof apiResponse === 'undefined') {
         return
     }
 
     for (const [index, element] of Array.from(textElements).entries()) {
-        if (typeof response[index] === 'undefined') {
+        if (isValidApiResponseOnIndex(apiResponse, index) === false) {
             continue
         }
-        const originalText = response[index].originalText
-        if (typeof originalText === 'undefined') {
+        const furiganaTag = addFurigana(apiResponse[index].originalText, apiResponse[index].text)
+        if (isValidElementForAddRubyTag(element) === false) {
             continue
         }
-        const text = response[index].text // API側で textList とするほうが適切かも
-        if (typeof text === 'undefined') {
+        if (furiganaTag === element.parentNode.innerHTML) {
             continue
         }
-        const textWithRuby = addFurigana(originalText, text)
-        if (typeof element.parentNode === 'undefined') { continue }
-        if (element.parentNode === null) { continue }
-        if (typeof element.parentNode.innerHTML === 'undefined') { continue }
-        if (textWithRuby === element.parentNode.innerHTML) {
-            continue
-        }
-        // MEMO: <span>タグを追加した場合、ページに設定されているスタイルを拾ってしまうことがあるため、<r>タグという非標準のタグを使う
-        let newElement = document.createElement('r')
-        newElement.className = element.className ? element.className + ' js-furigana' : 'js-furigana';
-        newElement.innerHTML = textWithRuby
-        const parent = element.parentNode
-        if (parent) {
-            parent.replaceChild(newElement, element)
-        }
+        addFuriganaToNode(element, furiganaTag)
     }
 }
 
