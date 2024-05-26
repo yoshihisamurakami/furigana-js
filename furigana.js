@@ -5,12 +5,12 @@ const containsKanji = (str) => {
     return /[\u4E00-\u9FAF]/.test(str)
 }
 
-const addFurigana = (originalText, furiganaObj) => {
+const addFurigana = (originalText, furiganaDetails) => {
     let result = ''
     let currentIndex = 0
 
     let count = 0
-    let furiganaObjStartIndex = 0
+    let furiganaDetailsStartIndex = 0
 
     while (currentIndex < originalText.length) {
         count += 1
@@ -20,8 +20,8 @@ const addFurigana = (originalText, furiganaObj) => {
         }
         let found = false
 
-        for (let i = furiganaObjStartIndex; i < furiganaObj.length; i++) {
-            const obj = furiganaObj[i]
+        for (let i = furiganaDetailsStartIndex; i < furiganaDetails.length; i++) {
+            const obj = furiganaDetails[i]
             if (obj.text == '') {
                 continue
             }
@@ -36,7 +36,7 @@ const addFurigana = (originalText, furiganaObj) => {
                 }
                 currentIndex += obj.text.length
                 found = true
-                furiganaObjStartIndex = i + 1
+                furiganaDetailsStartIndex = i + 1
                 break
             }
         }
@@ -138,8 +138,7 @@ const isValidApiResponseOnIndex = (apiResponse, index) => {
     if (typeof apiResponse[index].originalText === 'undefined') {
         return false
     }
-    // API側で apiResponse[index].textList とするほうが適切かも)
-    if (typeof apiResponse[index].text === 'undefined') {
+    if (typeof apiResponse[index].furiganaDetails === 'undefined') {
         return false
     }
     return true
@@ -188,7 +187,7 @@ const addFuriganaToTextNodes = async (textElements) => {
         if (isValidApiResponseOnIndex(apiResponse, index) === false) {
             continue
         }
-        const furiganaTag = addFurigana(apiResponse[index].originalText, apiResponse[index].text)
+        const furiganaTag = addFurigana(apiResponse[index].originalText, apiResponse[index].furiganaDetails)
         if (isValidElementForAddRubyTag(element) === false) {
             continue
         }
