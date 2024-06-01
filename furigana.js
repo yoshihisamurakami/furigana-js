@@ -6,46 +6,39 @@ const containsKanji = (str) => {
 }
 
 const addFurigana = (originalText, furiganaDetails) => {
+    if (containsKanji(originalText) === false || furiganaDetails.length === 0) {
+        return originalText
+    }
+
     let result = ''
-    let currentIndex = 0
+    let furiganaDetailsIndex = 0
 
-    let count = 0
-    let furiganaDetailsStartIndex = 0
+    const applyFurigana = (textDetail) => {
+        return `<ruby>${textDetail.text}<rt>${textDetail.ruby}</rt></ruby>`
+    }
 
-    while (currentIndex < originalText.length) {
-        count += 1
-        if (count > 10000) {
-            console.log('### addFurigana関数でループが異常')
+    for (let originalTextIndex = 0; originalTextIndex < originalText.length; originalTextIndex++) {
+        if (furiganaDetailsIndex >= furiganaDetails.length) {
+            result += originalText.substring(originalTextIndex)
             break
         }
-        let found = false
 
-        for (let i = furiganaDetailsStartIndex; i < furiganaDetails.length; i++) {
-            const obj = furiganaDetails[i]
-            if (obj.text == '') {
-                continue
-            }
-            if (containsKanji(obj.text) === false) {
-                continue
-            }
-            if (originalText.startsWith(obj.text, currentIndex)) {
-                if (obj.ruby) {
-                    result += `<ruby>${obj.text}<rt>${obj.ruby}</rt></ruby>`
-                } else {
-                    result += obj.text
-                }
-                currentIndex += obj.text.length
-                found = true
-                furiganaDetailsStartIndex = i + 1
-                break
-            }
-        }
+        const furiganaDetail = furiganaDetails[furiganaDetailsIndex]
+        const textForSearch = originalText.substr(originalTextIndex)
 
-        if (!found) {
-            result += originalText[currentIndex]
-            currentIndex++
+        if (textForSearch.startsWith(furiganaDetail.text)) {
+            if (containsKanji(furiganaDetail.text) && furiganaDetail.ruby.length > 0) {
+                result += applyFurigana(furiganaDetail)
+            } else {
+                result += furiganaDetail.text
+            }
+            originalTextIndex += furiganaDetail.text.length - 1 // Adjust index as `for` increments it
+            furiganaDetailsIndex++
+        } else {
+            result += originalText[originalTextIndex]
         }
     }
+
     return result
 }
 
@@ -95,9 +88,6 @@ const isExcludeParentTag = (element) => {
         return true
     }
     if (parent && parent.tagName === 'R' && parent.className.includes('js-furigana')) {
-        return true
-    }
-    if (parent && parent.tagName === 'SPAN' && parent.className.includes('js-furigana')) {
         return true
     }
     return false
