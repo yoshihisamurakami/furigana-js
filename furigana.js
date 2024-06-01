@@ -244,19 +244,23 @@ const furiganaSwitchOff = async () => {
     hideFurigana()
 }
 
-// chrome拡張機能のポップアップ画面から「ふりがなON」「ふりがなOFF」の選択肢が変わったとき
-chrome.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
-    if (request.msg === 'popup-furigana-on') {
-        chrome.storage.local.set({furiganaMode: true})
-        await furiganaSwitchOn()
-    } else if (request.msg === 'popup-furigana-off') {
-        chrome.storage.local.set({furiganaMode: false})
-        await furiganaSwitchOff()
-    }
-})
+const setPopupEventListener = () => {
+    // chrome拡張機能のポップアップ画面から「ふりがなON」「ふりがなOFF」の選択肢が変わったとき
+    chrome.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
+        if (request.msg === 'popup-furigana-on') {
+            chrome.storage.local.set({furiganaMode: true})
+            await furiganaSwitchOn()
+        } else if (request.msg === 'popup-furigana-off') {
+            chrome.storage.local.set({furiganaMode: false})
+            await furiganaSwitchOff()
+        }
+    })
+}
+
 
 // ページが読み込まれたタイミングで実行される
 chrome.storage.local.get(null, (options) => {
+    setPopupEventListener()
     const furiganaMode = typeof options.furiganaMode === 'undefined' ? true : options.furiganaMode
     if (furiganaMode) {
         furiganaSwitchOn()
