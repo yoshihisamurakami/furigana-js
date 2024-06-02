@@ -5,47 +5,40 @@ const containsKanji = (str) => {
     return /[\u4E00-\u9FAF]/.test(str)
 }
 
-const addFurigana = (originalText, furiganaObj) => {
+const addFurigana = (originalText, furiganaDetails) => {
+    if (containsKanji(originalText) === false || furiganaDetails.length === 0) {
+        return originalText
+    }
+
     let result = ''
-    let currentIndex = 0
+    let furiganaDetailsIndex = 0
 
-    let count = 0
-    let furiganaObjStartIndex = 0
+    const applyFurigana = (textDetail) => {
+        return `<ruby>${textDetail.text}<rt>${textDetail.ruby}</rt></ruby>`
+    }
 
-    while (currentIndex < originalText.length) {
-        count += 1
-        if (count > 10000) {
-            console.log('### addFurigana関数でループが異常')
+    for (let originalTextIndex = 0; originalTextIndex < originalText.length; originalTextIndex++) {
+        if (furiganaDetailsIndex >= furiganaDetails.length) {
+            result += originalText.substring(originalTextIndex)
             break
         }
-        let found = false
 
-        for (let i = furiganaObjStartIndex; i < furiganaObj.length; i++) {
-            const obj = furiganaObj[i]
-            if (obj.text == '') {
-                continue
-            }
-            if (containsKanji(obj.text) === false) {
-                continue
-            }
-            if (originalText.startsWith(obj.text, currentIndex)) {
-                if (obj.ruby) {
-                    result += `<ruby>${obj.text}<rt>${obj.ruby}</rt></ruby>`
-                } else {
-                    result += obj.text
-                }
-                currentIndex += obj.text.length
-                found = true
-                furiganaObjStartIndex = i + 1
-                break
-            }
-        }
+        const furiganaDetail = furiganaDetails[furiganaDetailsIndex]
+        const textForSearch = originalText.substr(originalTextIndex)
 
-        if (!found) {
-            result += originalText[currentIndex]
-            currentIndex++
+        if (textForSearch.startsWith(furiganaDetail.text)) {
+            if (containsKanji(furiganaDetail.text) && furiganaDetail.ruby.length > 0) {
+                result += applyFurigana(furiganaDetail)
+            } else {
+                result += furiganaDetail.text
+            }
+            originalTextIndex += furiganaDetail.text.length - 1 // Adjust index as `for` increments it
+            furiganaDetailsIndex++
+        } else {
+            result += originalText[originalTextIndex]
         }
     }
+
     return result
 }
 
@@ -64,7 +57,7 @@ const fetchFuriganaApi = async (originalText) => {
             return response.json()
         })
         .then(data => {
-            return data
+            return data.response
         })
         .catch(error => {
             console.log('There was a problem with the fetch operation: ')
@@ -95,9 +88,6 @@ const isExcludeParentTag = (element) => {
         return true
     }
     if (parent && parent.tagName === 'R' && parent.className.includes('js-furigana')) {
-        return true
-    }
-    if (parent && parent.tagName === 'SPAN' && parent.className.includes('js-furigana')) {
         return true
     }
     return false
@@ -131,45 +121,70 @@ const getTextNodes = async (elements, stocks = []) => {
     return stocks
 }
 
+const isValidApiResponseOnIndex = (apiResponse, index) => {
+    if (typeof apiResponse[index] === 'undefined') {
+        return false
+    }
+    if (typeof apiResponse[index].originalText === 'undefined') {
+        return false
+    }
+    if (typeof apiResponse[index].furiganaDetails === 'undefined') {
+        return false
+    }
+    return true
+}
+
+const isValidElementForAddRubyTag = (element) => {
+    if (typeof element.parentNode === 'undefined') {
+        return false
+    }
+    if (element.parentNode === null) {
+        return false
+    }
+    if (typeof element.parentNode.innerHTML === 'undefined') {
+        return false
+    }
+    return true
+}
+
+const addFuriganaToNode = (element, furiganaTag) => {
+    // MEMO:
+    // ふりがな挿入用のタグを <span class="js-furigana"> .. </span>
+    // とした場合、素の<span>タグに何らかのスタイルが割り当てられているページに適用すると、
+    // そのスタイルがふりがなタグ全体に適用されてしまいページ表示が崩れることがある。
+    // その現象を防ぐため、<r>タグという非標準のタグを使った。
+    let newElement = document.createElement('r')
+    newElement.className = element.className ? element.className + ' js-furigana' : 'js-furigana';
+    newElement.innerHTML = furiganaTag
+    const parent = element.parentNode
+    if (parent) {
+        parent.replaceChild(newElement, element)
+    }
+}
+
 const addFuriganaToTextNodes = async (textElements) => {
     let textList = textElements.map(element => encodeHtmlEntities(element.textContent).trim())
-    if (textList.length == 0) {
+    if (textList.length === 0) {
         return
     }
 
     const apiResponse = await fetchFuriganaApi(textList)
-    const response  = apiResponse.response
-    if (typeof response === 'undefined') {
+    if (typeof apiResponse === 'undefined') {
         return
     }
 
     for (const [index, element] of Array.from(textElements).entries()) {
-        if (typeof response[index] === 'undefined') {
+        if (isValidApiResponseOnIndex(apiResponse, index) === false) {
             continue
         }
-        const originalText = response[index].originalText
-        if (typeof originalText === 'undefined') {
+        const furiganaTag = addFurigana(apiResponse[index].originalText, apiResponse[index].furiganaDetails)
+        if (isValidElementForAddRubyTag(element) === false) {
             continue
         }
-        const text = response[index].text // API側で textList とするほうが適切かも
-        if (typeof text === 'undefined') {
+        if (furiganaTag === element.parentNode.innerHTML) {
             continue
         }
-        const textWithRuby = addFurigana(originalText, text)
-        if (typeof element.parentNode === 'undefined') { continue }
-        if (element.parentNode === null) { continue }
-        if (typeof element.parentNode.innerHTML === 'undefined') { continue }
-        if (textWithRuby === element.parentNode.innerHTML) {
-            continue
-        }
-        // MEMO: <span>タグを追加した場合、ページに設定されているスタイルを拾ってしまうことがあるため、<r>タグという非標準のタグを使う
-        let newElement = document.createElement('r')
-        newElement.className = element.className ? element.className + ' js-furigana' : 'js-furigana';
-        newElement.innerHTML = textWithRuby
-        const parent = element.parentNode
-        if (parent) {
-            parent.replaceChild(newElement, element)
-        }
+        addFuriganaToNode(element, furiganaTag)
     }
 }
 
@@ -229,19 +244,23 @@ const furiganaSwitchOff = async () => {
     hideFurigana()
 }
 
-// chrome拡張機能のポップアップ画面から「ふりがなON」「ふりがなOFF」の選択肢が変わったとき
-chrome.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
-    if (request.msg === 'popup-furigana-on') {
-        chrome.storage.local.set({furiganaMode: true})
-        await furiganaSwitchOn()
-    } else if (request.msg === 'popup-furigana-off') {
-        chrome.storage.local.set({furiganaMode: false})
-        await furiganaSwitchOff()
-    }
-})
+const setPopupEventListener = () => {
+    // chrome拡張機能のポップアップ画面から「ふりがなON」「ふりがなOFF」の選択肢が変わったとき
+    chrome.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
+        if (request.msg === 'popup-furigana-on') {
+            chrome.storage.local.set({furiganaMode: true})
+            await furiganaSwitchOn()
+        } else if (request.msg === 'popup-furigana-off') {
+            chrome.storage.local.set({furiganaMode: false})
+            await furiganaSwitchOff()
+        }
+    })
+}
+
 
 // ページが読み込まれたタイミングで実行される
 chrome.storage.local.get(null, (options) => {
+    setPopupEventListener()
     const furiganaMode = typeof options.furiganaMode === 'undefined' ? true : options.furiganaMode
     if (furiganaMode) {
         furiganaSwitchOn()
