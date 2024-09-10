@@ -1,5 +1,6 @@
 
-const FuriganaApiUrl = 'http://localhost:8080/v2/furigana'
+// const FuriganaApiUrl = 'http://localhost:8080/furigana'
+const FuriganaApiUrl = 'https://go-furigana-api-72715150088.asia-northeast1.run.app/furigana'
 
 const containsKanji = (str) => {
     return /[\u4E00-\u9FAF]/.test(str)
@@ -101,7 +102,7 @@ const encodeHtmlEntities = (text) => {
                .replace(/'/g, '&#39;')
 }
 
-const getTextNodes = async (elements, stocks = []) => {
+const getTextNodes = (elements, stocks = []) => {
     for (const element of Array.from(elements)) {
         if (isExcludeTag(element) === true) {
             continue
@@ -115,7 +116,7 @@ const getTextNodes = async (elements, stocks = []) => {
                 stocks.push(element)
             }
         } else if (element.nodeType === Node.ELEMENT_NODE && element.hasChildNodes()) {
-            await getTextNodes(element.childNodes, stocks)
+            getTextNodes(element.childNodes, stocks)
         }
     }
     return stocks
@@ -190,7 +191,7 @@ const addFuriganaToTextNodes = async (textElements) => {
 
 const main = async () => {
     const bodyElements = document.getElementsByTagName('body')
-    const textElements = await getTextNodes(bodyElements)
+    const textElements = getTextNodes(bodyElements)
     await addFuriganaToTextNodes(textElements)
 }
 
@@ -201,7 +202,7 @@ const FgMutationObserver = {
     callback: async (mutationsList, observer) => {
         for (const mutation of mutationsList) {
             if (mutation.type === "childList") {
-                const textElements = await getTextNodes(mutation.addedNodes)
+                const textElements = getTextNodes(mutation.addedNodes)
                 await addFuriganaToTextNodes(textElements)
             }
         }
@@ -231,11 +232,9 @@ const hideFurigana = () => {
 }
 
 const furiganaSwitchOn = async () => {
-    setTimeout(async function() {
-        await main()
+    FgMutationObserver.observe(document.body)
 
-        FgMutationObserver.observe(document.body)
-    }, 0)
+    await main()
 
     showFuriganaIfHide()
 }
@@ -244,16 +243,25 @@ const furiganaSwitchOff = async () => {
     hideFurigana()
 }
 
+
+const asyncPopupEventListener = async (request) => {
+    if (request.msg === 'popup-furigana-on') {
+        chrome.storage.local.set({furiganaMode: true})
+        await furiganaSwitchOn()
+        return true
+
+    } else if (request.msg === 'popup-furigana-off') {
+        chrome.storage.local.set({furiganaMode: false})
+        await furiganaSwitchOff()
+        return true
+    }
+    return false
+}
+// chrome拡張機能のポップアップ画面から「ふりがなON」「ふりがなOFF」の選択肢が変わったとき
 const setPopupEventListener = () => {
-    // chrome拡張機能のポップアップ画面から「ふりがなON」「ふりがなOFF」の選択肢が変わったとき
-    chrome.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
-        if (request.msg === 'popup-furigana-on') {
-            chrome.storage.local.set({furiganaMode: true})
-            await furiganaSwitchOn()
-        } else if (request.msg === 'popup-furigana-off') {
-            chrome.storage.local.set({furiganaMode: false})
-            await furiganaSwitchOff()
-        }
+    chrome.runtime.onMessage.addListener((request) => {
+        const result = asyncPopupEventListener(request)
+        return result
     })
 }
 
