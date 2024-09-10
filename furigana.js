@@ -1,6 +1,6 @@
 
-// const FuriganaApiUrl = 'http://localhost:8080/v2/furigana'
-const FuriganaApiUrl = 'https://furigana-api-cihwrf6mkq-an.a.run.app/v2/furigana'
+// const FuriganaApiUrl = 'http://localhost:8080/furigana'
+const FuriganaApiUrl = 'https://go-furigana-api-72715150088.asia-northeast1.run.app/furigana'
 
 const containsKanji = (str) => {
     return /[\u4E00-\u9FAF]/.test(str)
@@ -102,7 +102,7 @@ const encodeHtmlEntities = (text) => {
                .replace(/'/g, '&#39;')
 }
 
-const getTextNodes = async (elements, stocks = []) => {
+const getTextNodes = (elements, stocks = []) => {
     for (const element of Array.from(elements)) {
         if (isExcludeTag(element) === true) {
             continue
@@ -116,7 +116,7 @@ const getTextNodes = async (elements, stocks = []) => {
                 stocks.push(element)
             }
         } else if (element.nodeType === Node.ELEMENT_NODE && element.hasChildNodes()) {
-            await getTextNodes(element.childNodes, stocks)
+            getTextNodes(element.childNodes, stocks)
         }
     }
     return stocks
@@ -191,7 +191,7 @@ const addFuriganaToTextNodes = async (textElements) => {
 
 const main = async () => {
     const bodyElements = document.getElementsByTagName('body')
-    const textElements = await getTextNodes(bodyElements)
+    const textElements = getTextNodes(bodyElements)
     await addFuriganaToTextNodes(textElements)
 }
 
@@ -202,7 +202,7 @@ const FgMutationObserver = {
     callback: async (mutationsList, observer) => {
         for (const mutation of mutationsList) {
             if (mutation.type === "childList") {
-                const textElements = await getTextNodes(mutation.addedNodes)
+                const textElements = getTextNodes(mutation.addedNodes)
                 await addFuriganaToTextNodes(textElements)
             }
         }
