@@ -1,12 +1,20 @@
 
 const onChangeFuriganaOn = async () => {
   let [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-  await chrome.tabs.sendMessage(tab.id, {"msg":"popup-furigana-on"})
+  const ret = chrome.tabs.sendMessage(tab.id, {"msg":"popup-furigana-on"})
+  ret.then(() => {
+  }).catch(() => {
+    console.log('fail sendMessage.. FuriganaOn')
+  })
 }
 
 const onChangeFuriganaOff = async () => {
   let [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-  await chrome.tabs.sendMessage(tab.id, {"msg":"popup-furigana-off"})
+  const ret = chrome.tabs.sendMessage(tab.id, {"msg":"popup-furigana-off"})
+  ret.then(() => {
+  }).catch(() => {
+    console.log('fail sendMessage.. FuriganaOff')
+  })
 }
 
 window.addEventListener("DOMContentLoaded", async (_) => {
