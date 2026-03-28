@@ -189,10 +189,15 @@ const addFuriganaToTextNodes = async (textElements) => {
     }
 }
 
+const BATCH_SIZE = 50
+
 const main = async () => {
     const bodyElements = document.getElementsByTagName('body')
     const textElements = getTextNodes(bodyElements)
-    await addFuriganaToTextNodes(textElements)
+    for (let i = 0; i < textElements.length; i += BATCH_SIZE) {
+        const batch = textElements.slice(i, i + BATCH_SIZE)
+        await addFuriganaToTextNodes(batch)
+    }
 }
 
 // MEMO: webページの変更を監視する MutationObserver周りの設定
