@@ -189,10 +189,20 @@ const addFuriganaToTextNodes = async (textElements) => {
     }
 }
 
-const main = async () => {
+const BATCH_SIZE = 50
+
+const processNextBatch = (textElements, index) => {
+    if (index >= textElements.length) return
+    const batch = textElements.slice(index, index + BATCH_SIZE)
+    addFuriganaToTextNodes(batch).then(() => {
+        setTimeout(() => processNextBatch(textElements, index + BATCH_SIZE), 0)
+    })
+}
+
+const main = () => {
     const bodyElements = document.getElementsByTagName('body')
     const textElements = getTextNodes(bodyElements)
-    await addFuriganaToTextNodes(textElements)
+    processNextBatch(textElements, 0)
 }
 
 // MEMO: webページの変更を監視する MutationObserver周りの設定
@@ -234,7 +244,7 @@ const hideFurigana = () => {
 const furiganaSwitchOn = async () => {
     FgMutationObserver.observe(document.body)
 
-    await main()
+    main()
 
     showFuriganaIfHide()
 }
