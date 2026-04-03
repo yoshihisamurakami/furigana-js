@@ -50,22 +50,19 @@ const fetchFuriganaApi = async (originalText) => {
         body: JSON.stringify({ text: originalText })
     }
 
-    const data = await fetch(FuriganaApiUrl, requestOptions)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok ' + response.statusText);
-            }
-            return response.json()
-        })
-        .then(data => {
-            return data.response
-        })
-        .catch(error => {
-            console.log('There was a problem with the fetch operation: ')
-            return {response: []}
-        })
-    
-    return data
+    try {
+        const response = await fetch(FuriganaApiUrl, requestOptions)
+
+        if (!response.ok) {
+            throw new Error(`Network response was not ok: ${response.statusText}`);
+        }
+
+        const data = await response.json()
+        return data.response
+    } catch (error) {
+        console.error('There was a problem with the fetch operation:', error);
+        return []
+    }
 }
 
 const isExcludeTag = (element) => {
@@ -170,7 +167,8 @@ const addFuriganaToTextNodes = async (textElements) => {
     }
 
     const apiResponse = await fetchFuriganaApi(textList)
-    if (typeof apiResponse === 'undefined') {
+
+    if (Array.isArray(apiResponse) && apiResponse.length === 0) {
         return
     }
 
@@ -281,7 +279,7 @@ const asyncPopupEventListener = async (request) => {
 const setPopupEventListener = () => {
     chrome.runtime.onMessage.addListener((request) => {
         const result = asyncPopupEventListener(request)
-        return result
+        return true
     })
 }
 
