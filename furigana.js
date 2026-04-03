@@ -199,10 +199,20 @@ const processNextBatch = (textElements, index) => {
     })
 }
 
+const isInViewport = (element) => {
+    const target = element.nodeType === Node.TEXT_NODE ? element.parentElement : element
+    if (!target) return false
+    const rect = target.getBoundingClientRect()
+    return rect.top < window.innerHeight && rect.bottom > 0
+}
+
 const main = () => {
     const bodyElements = document.getElementsByTagName('body')
     const textElements = getTextNodes(bodyElements)
-    processNextBatch(textElements, 0)
+    const inViewport = textElements.filter(el => isInViewport(el))    
+    const outOfViewport = textElements.filter(el => !isInViewport(el))
+
+    processNextBatch([...inViewport, ...outOfViewport], 0)
 }
 
 // MEMO: webページの変更を監視する MutationObserver周りの設定
