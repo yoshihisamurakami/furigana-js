@@ -25,7 +25,7 @@ const addFurigana = (originalText, furiganaDetails) => {
         }
 
         const furiganaDetail = furiganaDetails[furiganaDetailsIndex]
-        const textForSearch = originalText.substr(originalTextIndex)
+        const textForSearch = originalText.substring(originalTextIndex)
 
         if (textForSearch.startsWith(furiganaDetail.text)) {
             if (containsKanji(furiganaDetail.text) && furiganaDetail.ruby.length > 0) {
@@ -65,29 +65,16 @@ const fetchFuriganaApi = async (originalText) => {
     }
 }
 
-const isExcludeTag = (element) => {
-    if (element.tagName === 'SCRIPT') {
-        return true
-    } else if (element.tagName === 'R') {
-        return true
-    }
-    return false
-}
+const isExcludeTag = (element) =>
+    element.tagName === 'SCRIPT' || element.tagName === 'R'
 
 const isExcludeParentTag = (element) => {
     const parent = element.parentNode
-    if (parent && parent.tagName === 'RUBY') {
-        return true
-    }
-    if (parent && parent.tagName === 'STYLE') {
-        return true
-    }
-    if (parent && parent.tagName === 'NOSCRIPT') {
-        return true
-    }
-    if (parent && parent.tagName === 'R' && parent.className.includes('js-furigana')) {
-        return true
-    }
+    if (!parent) return false
+    if (parent.tagName === 'RUBY') return true
+    if (parent.tagName === 'STYLE') return true
+    if (parent.tagName === 'NOSCRIPT') return true
+    if (parent.tagName === 'R' && parent.className.includes('js-furigana')) return true
     return false
 }
 
@@ -132,18 +119,8 @@ const isValidApiResponseOnIndex = (apiResponse, index) => {
     return true
 }
 
-const isValidElementForAddRubyTag = (element) => {
-    if (typeof element.parentNode === 'undefined') {
-        return false
-    }
-    if (element.parentNode === null) {
-        return false
-    }
-    if (typeof element.parentNode.innerHTML === 'undefined') {
-        return false
-    }
-    return true
-}
+const isValidElementForAddRubyTag = (element) =>
+    !!element.parentNode
 
 const addFuriganaToNode = (element, furiganaTag) => {
     // MEMO:
@@ -193,6 +170,7 @@ const processNextBatch = (textElements, index) => {
     if (index >= textElements.length) return
     const batch = textElements.slice(index, index + BATCH_SIZE)
     addFuriganaToTextNodes(batch).then(() => {
+        // イベントループに制御を返してUIのフリーズを防ぐ
         setTimeout(() => processNextBatch(textElements, index + BATCH_SIZE), 0)
     })
 }
@@ -257,7 +235,7 @@ const furiganaSwitchOn = async () => {
     showFuriganaIfHide()
 }
 
-const furiganaSwitchOff = async () => {
+const furiganaSwitchOff = () => {
     hideFurigana()
 }
 
@@ -278,7 +256,7 @@ const asyncPopupEventListener = async (request) => {
 // chrome拡張機能のポップアップ画面から「ふりがなON」「ふりがなOFF」の選択肢が変わったとき
 const setPopupEventListener = () => {
     chrome.runtime.onMessage.addListener((request) => {
-        const result = asyncPopupEventListener(request)
+        asyncPopupEventListener(request)
         return true
     })
 }
