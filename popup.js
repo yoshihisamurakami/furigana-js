@@ -1,25 +1,19 @@
 
-const onChangeFuriganaOn = async () => {
-  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-  const ret = chrome.tabs.sendMessage(tab.id, {"msg":"popup-furigana-on"})
-  ret.then(() => {
-  }).catch(() => {
-    console.log('fail sendMessage.. FuriganaOn')
-  })
+const sendFuriganaMessage = async (msg) => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  try {
+    await chrome.tabs.sendMessage(tab.id, { msg })
+  } catch {
+    console.log(`fail sendMessage.. ${msg}`)
+  }
 }
 
-const onChangeFuriganaOff = async () => {
-  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-  const ret = chrome.tabs.sendMessage(tab.id, {"msg":"popup-furigana-off"})
-  ret.then(() => {
-  }).catch(() => {
-    console.log('fail sendMessage.. FuriganaOff')
-  })
-}
+const onChangeFuriganaOn  = () => sendFuriganaMessage('popup-furigana-on')
+const onChangeFuriganaOff = () => sendFuriganaMessage('popup-furigana-off')
 
 window.addEventListener("DOMContentLoaded", async (_) => {
   chrome.storage.local.get(null, (options) => {
-    const furiganaMode = typeof options.furiganaMode === 'undefined' ? true : options.furiganaMode
+    const furiganaMode = options.furiganaMode ?? true
     if (furiganaMode) {
       document.querySelector('input[name="form_furigana"][value="on"]').checked = true
     } else {
@@ -28,7 +22,12 @@ window.addEventListener("DOMContentLoaded", async (_) => {
   })
 
   // 各ラジオボタンに対してイベントリスナーを設定
+  const handlers = {
+    on:  onChangeFuriganaOn,
+    off: onChangeFuriganaOff,
+  }
   const radios = document.querySelectorAll('input[name="form_furigana"]')
-  radios[0].addEventListener('change', onChangeFuriganaOn)
-  radios[1].addEventListener('change', onChangeFuriganaOff)
+  radios.forEach(radio => {
+    radio.addEventListener('change', handlers[radio.value])
+  })
 })
