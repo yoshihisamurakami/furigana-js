@@ -265,7 +265,7 @@ const setPopupEventListener = () => {
 // ページが読み込まれたタイミングで実行される
 chrome.storage.local.get(null, (options) => {
     setPopupEventListener()
-    const furiganaMode = typeof options.furiganaMode === 'undefined' ? true : options.furiganaMode
+    const furiganaMode = options.furiganaMode ?? true
     if (furiganaMode) {
         furiganaSwitchOn()
     } else {
