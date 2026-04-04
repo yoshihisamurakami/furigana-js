@@ -3,6 +3,10 @@
   "name": "ふりがなふるよ",
   "version": "0.1",
   "permissions": ["activeTab","scripting","storage"],
+  "host_permissions": ["https://go-furigana-api-72715150088.asia-northeast1.run.app/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [{
     "matches": ["<all_urls>"],
     "js": [

@@ -1,7 +1,4 @@
 
-// const FuriganaApiUrl = 'http://localhost:8080/furigana'
-const FuriganaApiUrl = 'https://go-furigana-api-72715150088.asia-northeast1.run.app/furigana'
-
 const containsKanji = (str) => {
     return /[\u4E00-\u9FAF]/.test(str)
 }
@@ -43,24 +40,12 @@ const addFurigana = (originalText, furiganaDetails) => {
     return result
 }
 
-const fetchFuriganaApi = async (originalText) => {
-    const requestOptions = {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: originalText })
-    }
-
+const fetchFuriganaApi = async (textList) => {
     try {
-        const response = await fetch(FuriganaApiUrl, requestOptions)
-
-        if (!response.ok) {
-            throw new Error(`Network response was not ok: ${response.statusText}`);
-        }
-
-        const data = await response.json()
-        return data.response
+        const response = await chrome.runtime.sendMessage({ msg: 'fetch-furigana', textList })
+        return response ?? []
     } catch (error) {
-        console.error('There was a problem with the fetch operation:', error);
+        console.error('There was a problem with the fetch operation:', error)
         return []
     }
 }
