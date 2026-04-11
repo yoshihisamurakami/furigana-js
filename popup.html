@@ -6,11 +6,82 @@
 <style>
 body {
     font-size: 1.1em;
+    background: #f8f8f8;
+}
+
+.toggle-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.toggle-button-1 {
+    display: inline-block;
+    position: relative;
+    width: 40px;
+    height: 20px;
+    border-radius: 20px;
+    background-color: #dddddd;
+    transition: background-color .4s;
+}
+
+.toggle-button-1:has(:checked) {
+    background-color: #4bd865;
+}
+
+.toggle-button-1::after {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    box-shadow: 0 0 5px rgb(0 0 0 / 20%);
+    background-color: #fff;
+    content: '';
+    transition: left .2s;
+}
+
+.toggle-button-1:has(:checked)::after {
+    left: 20px;
+}
+
+.toggle-button-1 input {
+    display: none;
+}
+
+.toggle-wrapper span {
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    transition: opacity 0.25s;
+}
+
+.toggle-title {
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+}
+
+.toggle-wrapper .toggle-on {
+    opacity: 0.5;
+}
+
+.toggle-wrapper:has(:checked) .toggle-off {
+    opacity: 0.5;
+}
+
+.toggle-wrapper:has(:checked) .toggle-on {
+    opacity: 1;
 }
 </style>
 </head>
-<body style="min-width: 15em">
-<input type="radio" name="form_furigana" value="on" />ふりがなON
-<input type="radio" name="form_furigana" value="off" />ふりがなOFF
+<body style="min-width: 12em; text-align: center;">
+<label class="toggle-wrapper">
+  <p class="toggle-title">ふりがな</p>
+  <span class="toggle-off">OFF</span>
+  <span class="toggle-button-1"><input type="checkbox" id="furigana-toggle"/></span>
+  <span class="toggle-on">ON</span>
+</label>
 </body>
 </html>
