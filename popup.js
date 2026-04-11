@@ -12,22 +12,14 @@ const onChangeFuriganaOn  = () => sendFuriganaMessage('popup-furigana-on')
 const onChangeFuriganaOff = () => sendFuriganaMessage('popup-furigana-off')
 
 window.addEventListener("DOMContentLoaded", async (_) => {
+  const toggle = document.getElementById('furigana-toggle')
+
   chrome.storage.local.get(null, (options) => {
-    const furiganaMode = options.furiganaMode ?? true
-    if (furiganaMode) {
-      document.querySelector('input[name="form_furigana"][value="on"]').checked = true
-    } else {
-      document.querySelector('input[name="form_furigana"][value="off"]').checked = true
-    }
+    toggle.checked = options.furiganaMode ?? true
   })
 
-  // 各ラジオボタンに対してイベントリスナーを設定
-  const handlers = {
-    on:  onChangeFuriganaOn,
-    off: onChangeFuriganaOff,
-  }
-  const radios = document.querySelectorAll('input[name="form_furigana"]')
-  radios.forEach(radio => {
-    radio.addEventListener('change', handlers[radio.value])
+  toggle.addEventListener('change', () => {
+    const msg = toggle.checked ? 'popup-furigana-on' : 'popup-furigana-off'
+    sendFuriganaMessage(msg)
   })
 })
