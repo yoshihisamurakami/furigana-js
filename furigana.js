@@ -170,8 +170,11 @@ const isInViewport = (element) => {
 const main = () => {
     const bodyElements = document.getElementsByTagName('body')
     const textElements = getTextNodes(bodyElements)
-    const inViewport = textElements.filter(el => isInViewport(el))    
-    const outOfViewport = textElements.filter(el => !isInViewport(el))
+    const kanjiElements = textElements.filter(element =>
+        containsKanji(encodeHtmlEntities(element.textContent).trim())
+    )
+    const inViewport = kanjiElements.filter(el => isInViewport(el))
+    const outOfViewport = kanjiElements.filter(el => !isInViewport(el))
 
     processNextBatch([...inViewport, ...outOfViewport], 0)
 }
@@ -184,7 +187,10 @@ const FgMutationObserver = {
         for (const mutation of mutationsList) {
             if (mutation.type === "childList") {
                 const textElements = getTextNodes(mutation.addedNodes)
-                await addFuriganaToTextNodes(textElements)
+                const kanjiElements = textElements.filter(element =>
+                    containsKanji(encodeHtmlEntities(element.textContent).trim())
+                )
+                await addFuriganaToTextNodes(kanjiElements)
             }
         }
     },
