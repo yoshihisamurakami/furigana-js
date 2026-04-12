@@ -1,5 +1,4 @@
-
-const FuriganaApiUrl = 'https://go-furigana-api-72715150088.asia-northeast1.run.app/furigana'
+import FuriganaApiUrl from "./setting.js"
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.msg === 'fetch-furigana') {
