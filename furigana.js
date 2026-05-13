@@ -40,14 +40,22 @@ const addFurigana = (originalText, furiganaDetails) => {
     return result
 }
 
-const fetchFuriganaApi = async (textList) => {
-    try {
-        const response = await chrome.runtime.sendMessage({ msg: 'fetch-furigana', textList })
-        return response ?? []
-    } catch (error) {
-        console.error('There was a problem with the fetch operation:', error)
-        return []
+const fetchFuriganaWasm = async (textList) => {
+    const responseArray = []
+    for (let index = 0; index < textList.length; index++) {
+      try {
+          const response = await chrome.runtime.sendMessage({
+            type: "kagome-tokenize-request",
+            text: textList[index]
+          });
+          responseArray.push(response['response'])
+      } catch (error) {
+          console.log("ERROR: text = " + textList[index])
+          console.error('There was a problem with the fetch operation:', error)
+          return []
+      }
     }
+    return responseArray
 }
 
 const isExcludeTag = (element) =>
@@ -128,7 +136,7 @@ const addFuriganaToTextNodes = async (textElements) => {
         return
     }
 
-    const apiResponse = await fetchFuriganaApi(textList)
+    const apiResponse = await fetchFuriganaWasm(textList)
 
     if (Array.isArray(apiResponse) && apiResponse.length === 0) {
         return

@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "ふりがなふるよ",
+  "version": "0.1",
+  "minimum_chrome_version": "109",
+  "permissions": ["offscreen", "storage", "activeTab"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": [
+      "furigana.js"
+    ],
+    "run_at": "document_idle",
+    "world": "ISOLATED"
+  }],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  },
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_icon": {
+      "48": "icon/pen48.png"
+    },
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "16": "icon/pen16.png",
+    "48": "icon/pen48.png",
+    "128": "icon/pen128.png"
+  }
+}
