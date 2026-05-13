@@ -40,7 +40,7 @@ const addFurigana = (originalText, furiganaDetails) => {
     return result
 }
 
-const fetchFuriganaWasm = async (textList) => {
+const fetchFurigana = async (textList) => {
     const responseArray = []
     for (let index = 0; index < textList.length; index++) {
       try {
@@ -99,14 +99,14 @@ const getTextNodes = (elements, stocks = []) => {
     return stocks
 }
 
-const isValidApiResponseOnIndex = (apiResponse, index) => {
-    if (typeof apiResponse[index] === 'undefined') {
+const isValidResponseOnIndex = (response, index) => {
+    if (typeof response[index] === 'undefined') {
         return false
     }
-    if (typeof apiResponse[index].originalText === 'undefined') {
+    if (typeof response[index].originalText === 'undefined') {
         return false
     }
-    if (typeof apiResponse[index].furiganaDetails === 'undefined') {
+    if (typeof response[index].furiganaDetails === 'undefined') {
         return false
     }
     return true
@@ -136,17 +136,17 @@ const addFuriganaToTextNodes = async (textElements) => {
         return
     }
 
-    const apiResponse = await fetchFuriganaWasm(textList)
+    const response = await fetchFurigana(textList)
 
-    if (Array.isArray(apiResponse) && apiResponse.length === 0) {
+    if (Array.isArray(response) && response.length === 0) {
         return
     }
 
     for (const [index, element] of Array.from(textElements).entries()) {
-        if (isValidApiResponseOnIndex(apiResponse, index) === false) {
+        if (isValidResponseOnIndex(response, index) === false) {
             continue
         }
-        const furiganaTag = addFurigana(apiResponse[index].originalText, apiResponse[index].furiganaDetails)
+        const furiganaTag = addFurigana(response[index].originalText, response[index].furiganaDetails)
         if (isValidElementForAddRubyTag(element) === false) {
             continue
         }
