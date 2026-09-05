@@ -11,3 +11,12 @@ Furigana is especially helpful for Japanese learners because it makes unfamiliar
 # Operation Overview
 ![Demo](./furigana.gif)
 
+## Libraries Used
+
+This extension uses the following open-source library:
+
+| Library                                        | Purpose                                                     | License |
+| ---------------------------------------------- | ----------------------------------------------------------- | ------- |
+| [Kagome v2](https://github.com/ikawaha/kagome) | Japanese morphological analysis and word reading extraction | MIT     |
+
+Special thanks to the developers and contributors of Kagome.
