@@ -3,7 +3,7 @@ import "./wasm_exec.js";
 let kagomeReadyPromise = null;
 
 /**
- * wasm サンプルを起動して、
+ * wasm を起動して、
  * globalThis.kagome_tokenize が使える状態まで進める。
  */
 async function ensureKagomeReady() {
@@ -21,7 +21,7 @@ async function ensureKagomeReady() {
     // go.run() は通常 resolve しないので、待たずに起動する
     go.run(result.instance);
 
-    // Zenn サンプル main.go は registerCallbacks() で
+    // main.go は registerCallbacks() で
     // js.Global().Set("kagome_tokenize", js.FuncOf(tokenize))
     // を登録する
     await waitForGlobalFunction("kagome_tokenize", 15000);
