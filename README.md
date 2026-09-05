@@ -11,6 +11,9 @@ Furigana is especially helpful for Japanese learners because it makes unfamiliar
 # Operation Overview
 ![Demo](./furigana.gif)
 
+# About wasm code
+The code for wasm/kagome.wasm is available at https://github.com/yoshihisamurakami/furigana-wasm.
+
 ## Libraries Used
 
 This extension uses the following open-source library:
