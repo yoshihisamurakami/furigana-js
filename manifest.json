@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "ふりがなふるよ",
+  "name": "ふりがなくん",
   "version": "0.1",
   "minimum_chrome_version": "109",
   "permissions": ["offscreen", "storage", "activeTab"],
