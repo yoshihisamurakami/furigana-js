@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ふりがなくん — 日本語のwebページにふりがなをふるChrome拡張機能</title>
+  <style>
+    :root {
+      --accent: #e8574b;
+      --accent-dark: #c8433a;
+      --text: #2b2b2b;
+      --text-light: #5c5c5c;
+      --bg: #fdf9f3;
+      --card: #ffffff;
+      --border: #ede4d8;
+      --code-bg: #2d2a2e;
+      --code-text: #f4f1e8;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.9;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--accent-dark); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #f8b7a3 0%, #e8574b 100%);
+      color: #fff;
+      padding: 72px 24px 64px;
+      text-align: center;
+    }
+    .hero .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.22);
+      border: 1px solid rgba(255,255,255,0.5);
+      border-radius: 999px;
+      padding: 6px 18px;
+      font-size: 14px;
+      margin-bottom: 20px;
+      letter-spacing: 0.05em;
+    }
+    .hero h1 {
+      font-size: clamp(32px, 6vw, 52px);
+      margin: 0 0 12px;
+      letter-spacing: 0.04em;
+    }
+    .hero h1 ruby rt { font-size: 0.45em; font-weight: normal; }
+    .hero p {
+      font-size: clamp(15px, 2.5vw, 19px);
+      margin: 0 auto 28px;
+      max-width: 640px;
+      opacity: 0.95;
+    }
+    .hero .cta {
+      display: inline-block;
+      background: #fff;
+      color: var(--accent-dark);
+      font-weight: 700;
+      padding: 14px 36px;
+      border-radius: 999px;
+      font-size: 17px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .hero .cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 26px rgba(0,0,0,0.2);
+      text-decoration: none;
+    }
+
+    /* Layout */
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 8px 24px 80px;
+    }
+
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 36px;
+      margin: 28px 0;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    }
+
+    h2 {
+      font-size: 26px;
+      margin: 0 0 18px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid var(--accent);
+      display: inline-block;
+      letter-spacing: 0.03em;
+    }
+
+    p { margin: 0 0 16px; }
+    p:last-child { margin-bottom: 0; }
+
+    ul { padding-left: 1.4em; margin: 0 0 16px; }
+    li { margin-bottom: 10px; }
+    li:last-child { margin-bottom: 0; }
+
+    /* Ordered install steps */
+    ol.steps {
+      counter-reset: step;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    ol.steps li {
+      counter-increment: step;
+      position: relative;
+      padding: 16px 16px 16px 60px;
+      margin-bottom: 12px;
+      background: #fbf5ec;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      line-height: 1.7;
+    }
+    ol.steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+    }
+
+    .audience-list li {
+      background: #fbf5ec;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      list-style: none;
+    }
+    .audience-list { padding-left: 0; }
+    .audience-list li strong { color: var(--accent-dark); }
+
+    figure {
+      margin: 20px 0 0;
+      text-align: center;
+    }
+    figure img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    }
+    ol.steps li img {
+      display: block;
+      margin: 14px 0 4px;
+      max-width: 100%;
+      height: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      background: #fff;
+    }
+
+    code {
+      background: #f2e9dc;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.9em;
+    }
+
+    footer {
+      text-align: center;
+      padding: 32px 24px 48px;
+      color: var(--text-light);
+      font-size: 14px;
+    }
+    footer .links a { margin: 0 10px; }
+  </style>
+</head>
+<body>
+
+  <header class="hero">
+    <span class="badge">Chrome 拡張機能</span>
+    <h1><ruby>ふりがなくん<rt>ふりがなくん</rt></ruby></h1>
+    <p>日本語のwebページにふりがな（ルビ）をふる、ごくシンプルなChrome拡張機能です。</p>
+    <a class="cta" href="https://chromewebstore.google.com/detail/%E3%81%B5%E3%82%8A%E3%81%8C%E3%81%AA%E3%81%8F%E3%82%93/obglonhobaaoegbfbfofhjicmkdemfdk" target="_blank" rel="noopener">Chromeに追加する</a>
+  </header>
+
+  <main>
+
+    <section>
+      <h2>これは何？</h2>
+      <p>chrome拡張機能として、日本語のwebページにふりがな（ルビ）をふる拡張機能『ふりがなくん』を開発・公開いたしました。</p>
+      <ul>
+        <li><a href="https://chromewebstore.google.com/detail/%E3%81%B5%E3%82%8A%E3%81%8C%E3%81%AA%E3%81%8F%E3%82%93/obglonhobaaoegbfbfofhjicmkdemfdk" target="_blank" rel="noopener">ふりがなくん</a></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>どんな感じで動く？</h2>
+      <p>こんな感じです。</p>
+      <p>右上の「ふりがなOFF / ON」切り替えトグルからwebページ全体の文章にふりがなをつける・つけないの切り替えが可能です。ごくシンプルなインターフェースとしました。</p>
+      <figure>
+        <img src="images/demo.gif" alt="ふりがなくんの動作デモ" loading="lazy">
+      </figure>
+    </section>
+
+    <section>
+      <h2>導入の手順</h2>
+      <ol class="steps">
+        <li>「<a href="https://chromewebstore.google.com/detail/%E3%81%B5%E3%82%8A%E3%81%8C%E3%81%AA%E3%81%8F%E3%82%93/obglonhobaaoegbfbfofhjicmkdemfdk" target="_blank" rel="noopener">chromeウェブストア・ふりがなくん</a>」ページの右上から「Chromeに追加」ボタンをクリックします。<img src="images/step1.png" alt="手順1" loading="lazy"></li>
+        <li>『「ふりがなくん」を追加しますか？』メッセージの「拡張機能を追加」をクリックします。<img src="images/step2.png" alt="手順2" loading="lazy"></li>
+        <li>Chrome右上の「三点メニュー」→「拡張機能」→「拡張機能を管理」をクリックします。<img src="images/step3.png" alt="手順3" loading="lazy"></li>
+        <li>「ふりがなくん」の右側のトグルボタンをONに変更、「詳細」ボタンをクリックします。<img src="images/step4.png" alt="手順4" loading="lazy"></li>
+        <li>「サイトの設定」→「ツールバーに固定する」トグルをONにします。<img src="images/step5.png" alt="手順5" loading="lazy"></li>
+        <li>chrome右上に鉛筆マークが表示されることを確認します。<img src="images/step6.png" alt="手順6" loading="lazy"></li>
+        <li>鉛筆マークをクリックすると、ふりがなのON, OFFを切り替えるボタンが表示されます。ONにすると、みているページにふりがなが振られます。<img src="images/step7.png" alt="手順7" loading="lazy"></li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>どんな人に使ってほしい？</h2>
+      <p>以下のような人に使われることを想定しています。</p>
+      <ul class="audience-list">
+        <li><strong>日本語を学習中の方：</strong>小学生・中学生や外国からきてまだ日本語に慣れていない方</li>
+        <li><strong>日本語を読むのが難しい方：</strong>識字困難（ディスレクシア・読み書きに障害）をかかえている方</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>なぜ作ったか？</h2>
+      <p>ある日、テレビ番組『視点・論点』（NHK Eテレ）にて、元マネックス証券・松本大（おおき）さんが出演されていた『<a href="https://www.web.nhk/tv/pl/series-tep-Y5P47Z7YVW/ep/X5VK567JXM" target="_blank" rel="noopener">もっと社会に振り仮名を</a>』という番組をみたのがきっかけでした。</p>
+      <p>松本さんは幼い頃から読書が好きでよく本を読んでいましたが、ふりがなに大いに助けられた、大人向けの書籍であっても積極的にふりがなを付与していくべきである、というような主張でした。そのなかで「<a href="https://rubizaidan.jp/" target="_blank" rel="noopener">一般財団法人 ルビ財団</a>」を設立され、webページにふりがなをふるコードを作成する活動をされておられることも紹介されていました。</p>
+      <p>ん？　webページにふりがなをふるコード？　当時私はなんとなく仕事で「形態素解析」という仕組みを触った経験があり、chrome拡張機能を開発したこともあったため、「それだったら自分で作ってみよう！」と開発に取り組み始めました。</p>
+    </section>
+
+    <section>
+      <h2>技術情報</h2>
+      <p>技術的な情報は、こちらのQiita記事: 『<a href="https://qiita.com/muranet/items/b7aff76003e2fc0552a1" target="_blank">【個人開発】webページにふりがなをふる『ふりがなくん』を作ってみた</a>』をご参照ください。</p>
+    </section>
+    <!--
+    <section>
+      <h2>技術的なこと（超ざっくり解説）</h2>
+      <p>日本語のふりがなを付与するために、「形態素解析」というライブラリを利用しています。形態素解析とは、日本語の文章をインプットとして与えると、それを解析し、意味のある単語の単位で分解し、品詞の情報をつけてくれるツールです。MeCabというライブラリが有名です。日本語を品詞分解することが主な目的かな、と思いますが、読み仮名の情報も付与してくれています。今回のchrome拡張機能では、この「読み仮名」の情報を拾って使っています。</p>
+      <p>chrome拡張機能ではJavaScriptで閲覧中のページの情報を取得できます。このなかから 全TextNodeを拾い、文章を「ふりがなAPI」に投げる。返ってきた「漢字混じりテキスト」と対応する「ふりがな」の情報を、JavaScript側で解析し、元のWebページに <code>&lt;ruby&gt;</code> タグを追加して更新する…というような動作をさせています。</p>
+      <p>この「ふりがなAPI」ですが、最初はRubyのAPIサーバーを作ってそこに向けていたのですが、速度的に遅いものでした。そのためGo言語でのAPIを開発し、Google Cloud の Cloud Run にAPIサーバーを立てて使っていました。これでかなりレスポンスの速度は満足のいくものではあったのですが、Cloud Runではアクセス数が1か月で約100万件以上になった場合は有料になる、とのこと。正直なところ、そんなにバズった経験はないんですが、有料になるのは嫌だな…とぐずぐず考えているうちに、形態素解析のライブラリで新しく開発されたものを発見しました。</p>
+      <ul>
+        <li><a href="https://zenn.dev/ikawaha/books/kagome-v2-japanese-tokenizer/viewer/foreword" target="_blank" rel="noopener">実践:形態素解析 kagome v2</a></li>
+      </ul>
+      <p>この説明ページの中にwasmの動作サンプルがあり、とても快適に動くものだったので、こちらを今回のchrome拡張機能に利用させていただきました。GoのAPI向けプログラムを少し改修し、コンパイル時にwasm向けオプションをつけるだけで想定するwasmファイルが作成できます。</p>
+    </section>
+
+    <section>
+      <h2>今後の展望</h2>
+      <p>技術的な興味があって作りはじめましたが、このツールを必要とする人・使いたい人に届けられるように、なんとか宣伝活動を頑張っていきたいと思います！</p>
+    </section>
+
+    <section>
+      <h2>ソースコード</h2>
+      <ul>
+        <li><a href="https://github.com/yoshihisamurakami/furigana-js" target="_blank" rel="noopener">https://github.com/yoshihisamurakami/furigana-js</a></li>
+        <li><a href="https://github.com/yoshihisamurakami/furigana-wasm" target="_blank" rel="noopener">https://github.com/yoshihisamurakami/furigana-wasm</a></li>
+      </ul>
+    </section>
+    -->
+
+  </main>
+
+  <footer>
+    <div class="links">
+      <a href="https://chromewebstore.google.com/detail/%E3%81%B5%E3%82%8A%E3%81%8C%E3%81%AA%E3%81%8F%E3%82%93/obglonhobaaoegbfbfofhjicmkdemfdk" target="_blank" rel="noopener">Chromeウェブストア</a>
+      <a href="https://github.com/yoshihisamurakami/furigana-js" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <p>&copy; Yoshihisa Murakami</p>
+  </footer>
+
+</body>
+</html>
